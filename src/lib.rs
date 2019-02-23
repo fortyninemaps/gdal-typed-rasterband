@@ -1,4 +1,4 @@
-mod typed_raster_band {
+mod typed_rasterband {
     use gdal::errors::Result;
     use gdal::raster::dataset::{Buffer, Dataset};
     use gdal::raster::rasterband::RasterBand;
@@ -107,10 +107,10 @@ mod tests {
     use gdal_sys::GDALDataType;
     use std::path::Path;
 
-    use super::typed_raster_band::*;
+    use super::typed_rasterband::*;
 
     #[test]
-    fn typed_raster_band_u8() {
+    fn typed_rasterband_u8() {
         let path = Path::new("testdata/test_u8.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
@@ -120,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn typed_raster_band_u16() {
+    fn typed_rasterband_u16() {
         let path = Path::new("testdata/test_u16.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn typed_raster_band_u16_nodata() {
+    fn typed_rasterband_u16_nodata() {
         let path = Path::new("testdata/test_u16_nodata.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
