@@ -1,0 +1,9 @@
+[package]
+name = "gdal-typed-rasterband"
+version = "0.1.0"
+authors = ["Nat Wilson <njwilson23@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gdal-sys = "0.2.0"
+gdal = { git = "https://github.com/fortyninemaps/georust-gdal", branch = "public-gdaltype" }
