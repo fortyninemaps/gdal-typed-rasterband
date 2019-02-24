@@ -20,6 +20,11 @@ pub mod typed_rasterband {
             d as u16
         }
     }
+    impl GdalFrom<f64> for u32 {
+        fn from(d: f64) -> u32 {
+            d as u32
+        }
+    }
     impl GdalFrom<f64> for i16 {
         fn from(d: f64) -> i16 {
             d as i16
