@@ -1,9 +1,11 @@
 pub mod typed_rasterband {
-    use gdal::errors::Result;
+    use gdal::errors::Result as GdalResult;
     use gdal::raster::dataset::{Buffer, Dataset};
     use gdal::raster::rasterband::RasterBand;
     use gdal::raster::types::GdalType;
     use gdal_sys::GDALDataType;
+    use std::error;
+    use std::fmt;
     use std::marker::PhantomData;
 
     pub trait GdalFrom<T>: Sized {
@@ -46,18 +48,45 @@ pub mod typed_rasterband {
         }
     }
 
+    #[derive(Debug, Clone)]
+    pub struct TypeError {}
+
+    impl fmt::Display for TypeError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "band type doesn't match type specified in caller")
+        }
+    }
+
+    impl error::Error for TypeError {
+        fn description(&self) -> &str {
+            "band type doesn't match type specified in caller"
+        }
+
+        fn cause(&self) -> Option<&error::Error> {
+            None
+        }
+    }
+
     pub struct TypedRasterBand<'a, T: Copy + GdalType> {
         rasterband: &'a RasterBand<'a>,
         pixel_type: PhantomData<&'a T>,
     }
 
     impl<'a, T: Copy + GdalType + GdalFrom<f64>> TypedRasterBand<'a, T> {
-        pub fn from_rasterband(rasterband: &'a RasterBand) -> TypedRasterBand<'a, T> {
+        pub fn from_rasterband(
+            rasterband: &'a RasterBand,
+        ) -> Result<TypedRasterBand<'a, T>, TypeError> {
             let pixel_type = PhantomData::<&'a T>;
 
-            TypedRasterBand {
-                rasterband,
-                pixel_type,
+            let bt = rasterband.band_type();
+
+            if T::gdal_type() == bt {
+                Ok(TypedRasterBand {
+                    rasterband,
+                    pixel_type,
+                })
+            } else {
+                Err(TypeError {})
             }
         }
 
@@ -70,11 +99,11 @@ pub mod typed_rasterband {
             window: (isize, isize),
             window_size: (usize, usize),
             size: (usize, usize),
-        ) -> Result<Buffer<T>> {
+        ) -> GdalResult<Buffer<T>> {
             self.rasterband.read_as(window, window_size, size)
         }
 
-        pub fn read_band(&self) -> Result<Buffer<T>> {
+        pub fn read_band(&self) -> GdalResult<Buffer<T>> {
             self.rasterband.read_band_as()
         }
 
@@ -83,7 +112,7 @@ pub mod typed_rasterband {
             window: (isize, isize),
             window_size: (usize, usize),
             buffer: &Buffer<T>,
-        ) -> Result<()> {
+        ) -> GdalResult<()> {
             self.rasterband.write(window, window_size, buffer)
         }
 
@@ -119,7 +148,7 @@ mod tests {
         let path = Path::new("testdata/test_u8.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
-        let typed_band = TypedRasterBand::<u8>::from_rasterband(&band);
+        let typed_band = TypedRasterBand::<u8>::from_rasterband(&band).unwrap();
 
         assert_eq!(typed_band.band_type(), GDALDataType::GDT_Byte);
     }
@@ -129,9 +158,19 @@ mod tests {
         let path = Path::new("testdata/test_u16.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
-        let typed_band = TypedRasterBand::<u16>::from_rasterband(&band);
+        let typed_band = TypedRasterBand::<u16>::from_rasterband(&band).unwrap();
 
         assert_eq!(typed_band.band_type(), GDALDataType::GDT_UInt16);
+    }
+
+    #[test]
+    fn incorrect_type() {
+        let path = Path::new("testdata/test_u16.tif");
+        let ds = Dataset::open(path).expect("failed to open test dataset");
+        let band = ds.rasterband(1).expect("failed to read band");
+        let typed_band = TypedRasterBand::<u8>::from_rasterband(&band);
+
+        assert!(typed_band.is_err());
     }
 
     #[test]
@@ -139,7 +178,7 @@ mod tests {
         let path = Path::new("testdata/test_u16_nodata.tif");
         let ds = Dataset::open(path).expect("failed to open test dataset");
         let band = ds.rasterband(1).expect("failed to read band");
-        let typed_band = TypedRasterBand::<u16>::from_rasterband(&band);
+        let typed_band = TypedRasterBand::<u16>::from_rasterband(&band).unwrap();
 
         assert_eq!(typed_band.no_data_value(), Some(42));
     }
