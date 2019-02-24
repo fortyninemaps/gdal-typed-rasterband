@@ -1,4 +1,4 @@
-mod typed_rasterband {
+pub mod typed_rasterband {
     use gdal::errors::Result;
     use gdal::raster::dataset::{Buffer, Dataset};
     use gdal::raster::rasterband::RasterBand;
